@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Xenium Signatur Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f8f9fa;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+    input, select, textarea {
+      padding: 5px;
+      width: 100%;
+      max-width: 400px;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #7B6AF4;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    iframe {
+      width: 100%;
+      height: 400px;
+      border: 1px solid #ccc;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Xenium Signatur Generator</h1>
+
+  <label>Name</label>
+  <input type="text" id="name" value="Max Musterfrau">
+
+  <label>Pronomen (optional)</label>
+  <input type="text" id="pronoun" placeholder="z. B. er / ihm">
+
+  <label>Titel</label>
+  <input type="text" id="title" value="Consultant">
+
+  <label>E-Mail</label>
+  <input type="email" id="mail" value="max.musterfrau@xenium.com">
+
+  <label>Mobilnummer</label>
+  <input type="text" id="mobile" value="+49 160 1234">
+
+  <label>Grußzeile (optional, bitte „\n“ für Zeilenumbrüche verwenden)</label>
+  <textarea id="greeting">Viele Grüße,\nMax</textarea>
+
+  <label>Standort</label>
+  <select id="location">
+    <option value="DE">Deutschland</option>
+    <option value="AT">Österreich</option>
+  </select>
+
+  <label for="photoToggle">Profilfoto anzeigen (optional - quadratisches Bild empfohlen für optimale Darstellung)</label>
+  <input type="checkbox" id="photoToggle">
+  <input type="file" id="photo" accept="image/*" style="display: none;">
+
+  <button onclick="generateSignature()">Signatur generieren</button>
+
+  <iframe id="preview"></iframe>
+
+  <script>
+    const tpl = `<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns="http://www.w3.org/TR/REC-html40" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10pt;
+      white-space: nowrap;
+    }
+    .medium {
+      font-size: 9pt;
+      color: #000;
+      line-height: 11pt;
+    }
+    .small {
+      font-size: 8pt;
+      color: #2f2f2f;
+      line-height: 9pt;
+    }
+    a {
+      text-decoration: none;
+      color: #2f2f2f;
+    }
+  </style>
+</head>
+<body>
+<p style="font-family: Arial; font-size: 10pt; margin: 0;">_GREETING_</p>
+<table cellpadding="0" cellspacing="0" border="0">
+  <tr><td style="line-height:0; height:10px; font-size:0;">&nbsp;</td></tr>
+</table>
+<table cellspacing="0" cellpadding="0" border="0">
+  <tr>
+    _PHOTOHTML_
+    <td valign="top">
+      <table border="0" cellspacing="0" cellpadding="0">
+        <tr class="medium">
+          <td>
+            <b style="font-family: Arial; font-size: 10pt;">_NAME_</b><span style="font-family: Arial; font-size: 9pt; font-weight: normal;"> _PRONOUN_</span><br>
+            <span style="font-family: Arial; font-size: 10pt;">_TITLE_</span><br>
+            <span style="color: #7B6AF4; font-family: Arial; font-size: 10pt;">#gerneperdu</span>
+          </td>
+        </tr>
+        <tr>_SPACERHTML_</tr>
+        <tr class="small">
+          <td>
+            <a href="mailto:_MAIL_" style="font-family: Arial; font-size: 8pt;">_MAIL_</a>
+            <span style="color:#7B6AF4">■</span>
+            <span style="font-family: Arial; font-size: 8pt;">Mobil:</span>
+            <a href="tel:_MOBILE_" style="font-family: Arial; font-size: 8pt;">_MOBILE_</a><br>
+            <span style="font-family: Arial; font-size: 8pt;">__LOCATION__</span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>`;
+
+    const locations = {
+      DE: `
+<a href="https://www.xenium.com/"><b>Xenium AG</b></a> <span style="color:#7B6AF4">■</span>
+<a href="https://maps.google.com/?q=Sapporobogen+6-8+M%C3%BCnchen">Sapporobogen 6-8</a> <span style="color:#7B6AF4">■</span> 80637 München<br>
+Firmensitz: München <span style="color:#7B6AF4">■</span> Registergericht: Amtsgericht München <span style="color:#7B6AF4">■</span> HRB 127318<br>
+Vorstand: Dr. Wolfgang Reissenberger <span style="color:#7B6AF4">■</span> Aufsichtsrat: Tönnies-Hilmar von Donop`,
+      AT: `
+<a href="https://www.xenium.at/"><b>Xenium Austria GmbH</b></a> <span style="color:#7B6AF4">■</span>
+<a href="https://maps.google.com/?q=Siezenheimer+Str.+39a+5020+Salzburg">Siezenheimer Str. 39a</a> <span style="color:#7B6AF4">■</span> A-5020 Salzburg<br>
+Firmensitz: Salzburg <span style="color:#7B6AF4">■</span> Registergericht: Landesgericht Salzburg <span style="color:#7B6AF4">■</span> FN 574628 t<br>
+Geschäftsführer: Dr. Thomas Aschauer, Cornelia Utschig`
+    };
+
+    document.getElementById('photoToggle').addEventListener('change', () => {
+      document.getElementById('photo').style.display = document.getElementById('photoToggle').checked ? 'block' : 'none';
+    });
+
+    function generateSignature() {
+      let html = tpl;
+      const name = document.getElementById('name').value.trim();
+      const pronoun = document.getElementById('pronoun').value.trim();
+      const title = document.getElementById('title').value.trim();
+      const mail = document.getElementById('mail').value.trim();
+      const mobile = document.getElementById('mobile').value.trim();
+      const greeting = document.getElementById('greeting').value.replace(/\\n/g, '<br>');
+      const locationKey = document.getElementById('location').value;
+
+      html = html.replace(/_NAME_/g, name)
+                 .replace(/_PRONOUN_/g, pronoun ? `(${pronoun})` : '')
+                 .replace(/_TITLE_/g, title)
+                 .replace(/_MAIL_/g, mail)
+                 .replace(/_MOBILE_/g, mobile)
+                 .replace(/_GREETING_/g, greeting)
+                 .replace(/__LOCATION__/g, locations[locationKey]);
+
+      const withPhoto = document.getElementById('photoToggle').checked;
+      const fileInput = document.getElementById('photo');
+      const iframe = document.getElementById('preview');
+
+      let spacerHTML = '<td colspan="3" style="height: 4px; font-size: 0; line-height: 0;">&nbsp;</td>';
+
+      if (withPhoto && fileInput.files.length > 0) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const base64 = e.target.result;
+          const imgHTML = `<td rowspan="3" valign="middle" style="height:105px;width:105px">
+<a href="mailto:${mail}"><img border="0" src="${base64}" style="width: 105px; height: 105px; object-fit: cover; object-position: center; display: block; border-radius: 0;"></a></td>
+<td rowspan="3" width="10">&nbsp;</td>`;
+          html = html.replace(/_PHOTOHTML_/g, imgHTML)
+                     .replace(/_SPACERHTML_/g, spacerHTML);
+          iframe.srcdoc = html;
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
+        html = html.replace(/_PHOTOHTML_/g, '')
+                   .replace(/_SPACERHTML_/g, spacerHTML);
+        iframe.srcdoc = html;
+      }
+    }
+  </script>
+</body>
+</html>
